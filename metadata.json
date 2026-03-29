@@ -1,0 +1,7 @@
+{
+  "name": "BatchSnap",
+  "description": "One day. One QR. Everyone you'll miss. A farewell and convocation app for final year students to connect, exchange contacts, and capture memories.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}

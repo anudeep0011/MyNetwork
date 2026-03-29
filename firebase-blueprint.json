@@ -1,0 +1,197 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "The profile of a student.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "The unique ID of the user." },
+        "name": { "type": "string", "description": "Full name of the student." },
+        "phone": { "type": "string", "description": "Phone number in E.164 format." },
+        "instagram": { "type": "string", "description": "Instagram handle without @" },
+        "linkedin": { "type": "string", "description": "Full LinkedIn profile URL." },
+        "branch": { "type": "string", "description": "Academic branch." },
+        "college": { "type": "string", "description": "Full college name." },
+        "graduationYear": { "type": "number", "description": "4-digit graduation year." },
+        "photoUrl": { "type": "string", "description": "Firebase Storage URL for profile photo." },
+        "farewellQuote": { "type": "string", "description": "Personal farewell quote." },
+        "qrCodeData": { "type": "string", "description": "Deep link URL encoding the user's UID." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Account creation timestamp." },
+        "madeBetterCount": { "type": "number", "description": "Count of 'made you better' tags received." },
+        "fourAmCount": { "type": "number", "description": "Count of people who added user to 4AM list." }
+      },
+      "required": ["uid", "name", "phone", "branch", "college", "graduationYear", "photoUrl", "farewellQuote", "qrCodeData", "createdAt"]
+    },
+    "Connection": {
+      "title": "Connection",
+      "description": "A connection between two students.",
+      "type": "object",
+      "properties": {
+        "scannedUserId": { "type": "string", "description": "UID of the person that was scanned." },
+        "scannedAt": { "type": "string", "format": "date-time", "description": "Timestamp when the scan occurred." },
+        "savedToContacts": { "type": "boolean", "description": "Whether the user exported vCard." }
+      },
+      "required": ["scannedUserId", "scannedAt", "savedToContacts"]
+    },
+    "FarewellNote": {
+      "title": "FarewellNote",
+      "description": "A note left for a student.",
+      "type": "object",
+      "properties": {
+        "senderId": { "type": "string", "description": "UID of the person who left the note." },
+        "senderName": { "type": "string", "description": "Name of the sender." },
+        "senderPhotoUrl": { "type": "string", "description": "Photo URL of the sender." },
+        "type": { "type": "string", "enum": ["text", "drawing"], "description": "Type of note." },
+        "content": { "type": "string", "description": "Text content or Firebase Storage URL for drawing." },
+        "sentAt": { "type": "string", "format": "date-time", "description": "Timestamp when note was submitted." }
+      },
+      "required": ["senderId", "senderName", "senderPhotoUrl", "type", "content", "sentAt"]
+    },
+    "BatchInfo": {
+      "title": "BatchInfo",
+      "description": "Information about a specific batch.",
+      "type": "object",
+      "properties": {
+        "college": { "type": "string", "description": "College name." },
+        "graduationYear": { "type": "number", "description": "Graduation year." },
+        "farewellDate": { "type": "string", "format": "date-time", "description": "Date of farewell event." },
+        "anthemSong": { "type": "string", "description": "Winning song title." },
+        "moodCounts": { "type": "object", "description": "Map of emoji key to vote count." },
+        "goodbyeWords": { "type": "array", "items": { "type": "string" }, "description": "Array of one-word ratings." },
+        "adminUserId": { "type": "string", "description": "UID of the batch admin." }
+      },
+      "required": ["college", "graduationYear", "farewellDate", "adminUserId"]
+    },
+    "Confession": {
+      "title": "Confession",
+      "description": "An anonymous confession.",
+      "type": "object",
+      "properties": {
+        "text": { "type": "string", "description": "Confession text." },
+        "postedAt": { "type": "string", "format": "date-time", "description": "Submission timestamp." },
+        "spamHash": { "type": "string", "description": "Hash to prevent spam." }
+      },
+      "required": ["text", "postedAt", "spamHash"]
+    },
+    "SuperlativeVote": {
+      "title": "SuperlativeVote",
+      "description": "A vote for a batch superlative.",
+      "type": "object",
+      "properties": {
+        "categoryId": { "type": "string" },
+        "voterId": { "type": "string" },
+        "targetId": { "type": "string" },
+        "batchId": { "type": "string" }
+      },
+      "required": ["categoryId", "voterId", "targetId", "batchId"]
+    },
+    "MemoryJarEntry": {
+      "title": "MemoryJarEntry",
+      "description": "A shared batch memory.",
+      "type": "object",
+      "properties": {
+        "text": { "type": "string" },
+        "postedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["text", "postedAt"]
+    },
+    "PhotoWallEntry": {
+      "title": "PhotoWallEntry",
+      "description": "A photo uploaded to the batch wall.",
+      "type": "object",
+      "properties": {
+        "photoUrl": { "type": "string" },
+        "uploaderId": { "type": "string" },
+        "uploaderName": { "type": "string" },
+        "uploadedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["photoUrl", "uploaderId", "uploaderName", "uploadedAt"]
+    },
+    "SecretAdmirerEntry": {
+      "title": "SecretAdmirerEntry",
+      "description": "A secret admirer message.",
+      "type": "object",
+      "properties": {
+        "senderId": { "type": "string" },
+        "targetId": { "type": "string" },
+        "text": { "type": "string" },
+        "sentAt": { "type": "string", "format": "date-time" },
+        "revealed": { "type": "boolean" }
+      },
+      "required": ["senderId", "targetId", "text", "sentAt", "revealed"]
+    },
+    "ThankYouCard": {
+      "title": "ThankYouCard",
+      "description": "A private thank you card.",
+      "type": "object",
+      "properties": {
+        "senderId": { "type": "string" },
+        "senderName": { "type": "string" },
+        "targetId": { "type": "string" },
+        "text": { "type": "string" },
+        "sentAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["senderId", "senderName", "targetId", "text", "sentAt"]
+    },
+    "MapPin": {
+      "title": "MapPin",
+      "description": "A pin on the campus map.",
+      "type": "object",
+      "properties": {
+        "lat": { "type": "number" },
+        "lng": { "type": "number" },
+        "text": { "type": "string" },
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "postedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["lat", "lng", "text", "userId", "userName", "postedAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "User profile documents."
+    },
+    "/users/{userId}/connections/{connectionId}": {
+      "schema": "Connection",
+      "description": "List of people this user has scanned."
+    },
+    "/users/{userId}/notes/{noteId}": {
+      "schema": "FarewellNote",
+      "description": "Notes received by this user."
+    },
+    "/users/{userId}/thanks/{thanksId}": {
+      "schema": "ThankYouCard",
+      "description": "Thank you cards received by this user."
+    },
+    "/batches/{batchId}": {
+      "schema": "BatchInfo",
+      "description": "Batch-wide data."
+    },
+    "/batches/{batchId}/confessions/{confessionId}": {
+      "schema": "Confession",
+      "description": "Anonymous confessions for a batch."
+    },
+    "/batches/{batchId}/superlatives/{voteId}": {
+      "schema": "SuperlativeVote",
+      "description": "Votes for batch superlatives."
+    },
+    "/batches/{batchId}/memories/{memoryId}": {
+      "schema": "MemoryJarEntry",
+      "description": "Shared batch memories."
+    },
+    "/batches/{batchId}/photos/{photoId}": {
+      "schema": "PhotoWallEntry",
+      "description": "Shared batch photos."
+    },
+    "/batches/{batchId}/admirers/{admirerId}": {
+      "schema": "SecretAdmirerEntry",
+      "description": "Secret admirer messages."
+    },
+    "/batches/{batchId}/map_pins/{pinId}": {
+      "schema": "MapPin",
+      "description": "Pins on the campus map."
+    }
+  }
+}

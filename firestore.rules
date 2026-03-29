@@ -1,0 +1,235 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Document ID: {userId}
+    // Fields:
+    //   - uid: string (required, immutable)
+    //   - name: string (required, min 1, max 100)
+    //   - phone: string (required, E.164 format)
+    //   - instagram: string (required, max 50)
+    //   - linkedin: string (optional, URL)
+    //   - branch: string (required)
+    //   - college: string (required)
+    //   - graduationYear: number (required, 2020-2030)
+    //   - photoUrl: string (required, URL)
+    //   - farewellQuote: string (required, max 120)
+    //   - qrCodeData: string (required)
+    //   - createdAt: timestamp (required, immutable)
+    //   - madeBetterCount: number (required)
+    //   - fourAmCount: number (required)
+    //
+    // Collection: users/{userId}/connections
+    // Document ID: {connectionId}
+    // Fields:
+    //   - scannedUserId: string (required)
+    //   - scannedAt: timestamp (required)
+    //   - savedToContacts: boolean (required)
+    //
+    // Collection: users/{userId}/notes
+    // Document ID: {noteId}
+    // Fields:
+    //   - senderId: string (required)
+    //   - senderName: string (required)
+    //   - senderPhotoUrl: string (required)
+    //   - type: string (required, enum: ['text', 'drawing'])
+    //   - content: string (required, max 1000)
+    //   - sentAt: timestamp (required)
+    //
+    // Collection: batches
+    // Document ID: {batchId}
+    // Fields:
+    //   - college: string (required)
+    //   - graduationYear: number (required)
+    //   - farewellDate: timestamp (required)
+    //   - anthemSong: string (optional)
+    //   - moodCounts: map (required)
+    //   - goodbyeWords: list (required)
+    //   - adminUserId: string (required)
+    //
+    // Collection: batches/{batchId}/confessions
+    // Document ID: {confessionId}
+    // Fields:
+    //   - text: string (required, max 120)
+    //   - postedAt: timestamp (required)
+    //   - spamHash: string (required)
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+          (request.auth.token.email == "sagaranudeeppasala@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    function isValidUrl(url) {
+      return url is string && (url.matches("^https://.*") || url.matches("^http://.*"));
+    }
+
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+
+    function isValidUser(data) {
+      return hasRequiredFields(['uid', 'name', 'phone', 'branch', 'college', 'graduationYear', 'photoUrl', 'farewellQuote', 'qrCodeData', 'createdAt', 'madeBetterCount', 'fourAmCount']) &&
+             hasOnlyAllowedFields(['uid', 'name', 'phone', 'instagram', 'linkedin', 'branch', 'college', 'graduationYear', 'photoUrl', 'farewellQuote', 'qrCodeData', 'createdAt', 'madeBetterCount', 'fourAmCount', 'role']) &&
+             data.uid == request.auth.uid &&
+             data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
+             data.phone is string && data.phone.size() >= 10 &&
+             data.branch is string &&
+             data.college is string &&
+             data.graduationYear is number && data.graduationYear >= 2020 && data.graduationYear <= 2030 &&
+             isValidUrl(data.photoUrl) &&
+             data.farewellQuote is string && data.farewellQuote.size() <= 120 &&
+             data.madeBetterCount is number &&
+             data.fourAmCount is number;
+    }
+
+    function isValidConnection(data) {
+      return hasRequiredFields(['scannedUserId', 'scannedAt', 'savedToContacts']) &&
+             data.scannedUserId is string &&
+             data.scannedAt is timestamp &&
+             data.savedToContacts is bool;
+    }
+
+    function isValidNote(data) {
+      return hasRequiredFields(['senderId', 'senderName', 'senderPhotoUrl', 'type', 'content', 'sentAt']) &&
+             data.senderId == request.auth.uid &&
+             data.senderName is string &&
+             isValidUrl(data.senderPhotoUrl) &&
+             data.type in ['text', 'drawing'] &&
+             data.content is string && data.content.size() <= 1000 &&
+             data.sentAt is timestamp;
+    }
+
+    function isValidBatch(data) {
+      return hasRequiredFields(['college', 'graduationYear', 'farewellDate', 'adminUserId']) &&
+             data.college is string &&
+             data.graduationYear is number &&
+             data.farewellDate is timestamp &&
+             data.adminUserId is string;
+    }
+
+    function isValidConfession(data) {
+      return hasRequiredFields(['text', 'postedAt', 'spamHash']) &&
+             data.text is string && data.text.size() <= 120 &&
+             data.postedAt is timestamp &&
+             data.spamHash is string;
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow create: if isOwner(userId) && isValidUser(request.resource.data);
+      allow update: if (isOwner(userId) && isValidUser(request.resource.data) && request.resource.data.role == resource.data.role) || isAdmin();
+      allow delete: if isAdmin();
+
+      match /connections/{connectionId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidConnection(request.resource.data);
+        allow update: if isOwner(userId) && isValidConnection(request.resource.data);
+        allow delete: if isOwner(userId);
+      }
+
+      match /notes/{noteId} {
+        allow read: if isAuthenticated();
+        allow create: if isAuthenticated() && isValidNote(request.resource.data);
+        allow update: if false; // Notes are immutable
+        allow delete: if isOwner(userId) || isAdmin();
+      }
+    }
+
+    match /batches/{batchId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isValidBatch(request.resource.data);
+      allow update: if isAdmin() || (isAuthenticated() && request.auth.uid == resource.data.adminUserId);
+      allow delete: if isAdmin();
+
+      match /confessions/{confessionId} {
+        allow read: if isAuthenticated();
+        allow create: if isAuthenticated() && isValidConfession(request.resource.data);
+        allow update: if false;
+        allow delete: if isAdmin();
+      }
+
+      match /superlatives/{voteId} {
+        allow read: if isAuthenticated();
+        allow create: if isAuthenticated() && request.resource.data.voterId == request.auth.uid;
+        allow update: if false;
+        allow delete: if isAdmin();
+      }
+
+      match /memories/{memoryId} {
+        allow read: if isAuthenticated();
+        allow create: if isAuthenticated();
+        allow update: if false;
+        allow delete: if isAdmin();
+      }
+
+      match /photos/{photoId} {
+        allow read: if isAuthenticated();
+        allow create: if isAuthenticated() && request.resource.data.uploaderId == request.auth.uid;
+        allow update: if false;
+        allow delete: if isAdmin();
+      }
+
+      match /admirers/{admirerId} {
+        allow read: if isAuthenticated() && (resource.data.senderId == request.auth.uid || resource.data.targetId == request.auth.uid);
+        allow create: if isAuthenticated() && request.resource.data.senderId == request.auth.uid;
+        allow update: if isAuthenticated() && (resource.data.senderId == request.auth.uid || resource.data.targetId == request.auth.uid);
+        allow delete: if isAdmin();
+      }
+
+      match /map_pins/{pinId} {
+        allow read: if isAuthenticated();
+        allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+        allow update: if false;
+        allow delete: if isAdmin();
+      }
+    }
+
+    match /users/{userId}/thanks/{thanksId} {
+      allow read: if isAuthenticated() && (userId == request.auth.uid || resource.data.senderId == request.auth.uid);
+      allow create: if isAuthenticated() && request.resource.data.senderId == request.auth.uid;
+      allow update: if false;
+      allow delete: if isAdmin();
+    }
+
+    // Default deny
+    match /{path=**} {
+      allow read, write: if false;
+    }
+  }
+}
